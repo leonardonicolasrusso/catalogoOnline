@@ -59,47 +59,41 @@
     }
     .name{margin-top:8px;font-weight:700;text-transform:uppercase;font-size:14px}
 
-    /* DETAIL */
-    .detail{max-width:900px;margin:18px auto;display:none}
-    .detail.visible{display:block}
-    .crumbs{margin-bottom:14px}
-    .crumbs a{color:#2563eb;text-decoration:none}
-    .detail-card{
-      background:#fff;border-radius:18px;box-shadow:var(--shadow);
-      padding:20px;display:grid;gap:20px;grid-template-columns:1.1fr 1fr;
-    }
-    .detail-img{
-      width:100%;
-      aspect-ratio:1/1;
-      object-fit:contain;
-      background:#f1f3f5;border-radius:16px;
-      cursor: zoom-in;
-    }
-    .detail h2{margin:0 0 6px 0;text-transform:uppercase}
-    .muted{color:var(--muted)}
-    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    .btn{appearance:none;border:1px solid #e5e7eb;background:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
-    .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
-    .tag{font-size:13px;color:#059669;display:none}
-
-    @media (max-width: 860px){
-      .detail-card{grid-template-columns:1fr}
-    }
-
-    /* MODAL ZOOM */
-    #zoomModal{
-      display:none; position:fixed; inset:0;
-      background:rgba(0,0,0,.85);
-      justify-content:center; align-items:center; flex-direction:column;
-      z-index:2000; padding:20px;
-    }
-    #zoomModal img{ max-width:90%; max-height:80%; border-radius:10px; object-fit:contain; background:#fff; }
-    #zoomModal button{ margin-top:20px; background:#fff; color:#111; border:0; padding:8px 16px; font-size:16px; border-radius:8px; cursor:pointer; }
-    #zoomModal button:hover{ background:#eaeaea }
-
     /* Sentinel (infinite scroll) */
     #sentinel{ height:1px; }
     .loading-note{ text-align:center; color:var(--muted); font-size:13px; margin-top:10px; }
+
+    /* ===== MODAL DETALLE (simple) ===== */
+    #detailModal{
+      display:none; position:fixed; inset:0; z-index:2000;
+      background:rgba(0,0,0,.85);
+      justify-content:center; align-items:center; padding:20px;
+    }
+    .modal-card{
+      width:min(950px, 96vw);
+      background:#fff; border-radius:18px; box-shadow:var(--shadow);
+      padding:18px; display:grid; gap:16px; grid-template-columns: 1.1fr 1fr;
+      max-height: 92vh; overflow:auto;
+    }
+    @media (max-width: 860px){
+      .modal-card{ grid-template-columns:1fr; }
+    }
+    #modalImg{
+      width:100%; aspect-ratio:1/1; object-fit:contain; background:#f1f3f5; border-radius:14px;
+    }
+    .modal-title{ margin:0; text-transform:uppercase; }
+    .muted{ color:var(--muted); }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    .btn{appearance:none;border:1px solid #e5e7eb;background:#fff;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+    .center{ display:flex; justify-content:center; margin-top:6px; }
+    .toast{ font-size:13px; color:#059669; display:none; margin-top:6px; }
+
+    /* Botón cerrar “abajo” */
+    .modal-actions{
+      grid-column: 1 / -1;
+      display:flex; flex-direction:column; align-items:center;
+    }
   </style>
 </head>
 <body>
@@ -121,49 +115,34 @@
     <section id="grid" class="grid" aria-live="polite"></section>
     <div id="sentinel" aria-hidden="true"></div>
     <div id="loadingNote" class="loading-note" style="display:none;">Cargando más…</div>
-
-    <!-- DETAIL -->
-    <section id="detail" class="detail">
-      <div class="crumbs"><a href="#" id="backLink">← Volver al catálogo</a></div>
-      <div class="detail-card">
-        <img id="detailImg" class="detail-img" alt="Control remoto"/>
-        <div>
-          <h2 id="detailName">LCD 000</h2>
-          <p id="zoomHint" class="muted" style="margin-top:4px;">Haz clic en la imagen para hacer zoom 🔍</p>
-          <div class="row">
-            <a id="openLink" style="display:none" class="btn" target="_blank" rel="noopener">Abrir este link</a>
-            <button id="shareBtn" class="btn primary">Compartir</button>
-            <span id="shared" class="tag">¡Listo para enviar!</span>
-          </div>
-        </div>
-      </div>
-    </section>
   </main>
 
-  <!-- MODAL ZOOM -->
-  <div id="zoomModal" role="dialog" aria-modal="true" aria-label="Zoom de imagen">
-    <img id="zoomImg" src="" alt="Zoom control" />
-    <button id="zoomClose">✖ Cerrar</button>
+  <!-- MODAL DETALLE -->
+  <div id="detailModal" role="dialog" aria-modal="true" aria-label="Detalle del control">
+    <div class="modal-card" id="modalCard">
+      <img id="modalImg" alt="Control remoto" />
+      <div>
+        <h2 id="modalName" class="modal-title">LCD 000</h2>
+        <p class="muted">Vista rápida. Podés compartir la imagen con vista previa en WhatsApp.</p>
+        <div class="row">
+          <button id="modalShare" class="btn primary">Compartir imagen</button>
+        </div>
+        <div id="modalToast" class="toast">¡Listo!</div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="modalClose" class="btn">✖ Cerrar</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    /* ================== CONFIG CATEGORÍAS ==================
-      Editá los arrays con los nombres de archivo (sin extensión).
-      Estructura de carpetas:
-        img/
-          lcd/        -> LCD / SMART TV
-          box/        -> TV BOX
-          universal/  -> UNIVERSAL
-          aire/       -> AIRE ACOND.
-      Las imágenes se buscan con la extensión definida en EXT.
-    ======================================================== */
+    /* ================== CONFIG CATEGORÍAS ================== */
     const EXT = '.png';
-
     const CATEGORIES = {
       lcd: {
         label: 'LCD / SMART TV',
         path: 'img/lcd/',
-        // 👉 IDs de LCD (los que ya venías usando)
         items: [
           132,133,401,403,405,406,407,408,409,410,411,412,415,416,417,418,419,420,421,422,423,424,425,426,427,428,429,430,431,432,433,434,435,436,437,438,439,440,441,442,443,444,445,446,447,"448","448TH",449,450,451,452,453,454,455,456,457,458,459,460,461,462,463,464,465,466,467,"467JV",468,469,470,471,472,473,474,475,476,477,478,479,480,481,482,483,484,485,486,487,488,489,490,491,492,493,494,495,496,497,"498","498TH","498TH2",499,500,501,502,503,504,505,506,507,508,509,510,511,512,513,514,515,516,517,518,519,520,521,522,523,524,525,526,527,528,529,530,531,532,533,534,535,536,537,538,539,540,541,542,543,544,545,546,547,548,549,550,551,552,553,"553P",554,557,558,559,560,561,562,563,564,565,566,567,568,569,570,571,572,573,574,575,576,577,578,579,580,581,582,583,584,585,586,587,588,589,590,591,592,593,594,595,596,597,598,599,600,611,612,613,614,615,616,617,618,619,620,621,622,623,624,625,626,627,628,629,630,631,632,633,634,635,636,638,639,640,641,642,643,644,645,646,649,654,656,657,658
         ],
@@ -172,52 +151,42 @@
       box: {
         label: 'TV BOX',
         path: 'img/box/',
-        // 👉 Agregá aquí los nombres de archivo (sin extensión) de tus 2 box.
-        // Ejemplos de prueba (cámbialos por los tuyos):
-        items: ['TvBox1', 'TvBox2'],
+        items: ['TvBox1', 'TvBox2'], // reemplazá por los tuyos
         displayName: id => String(id)
       },
       universal: {
         label: 'UNIVERSAL',
         path: 'img/universal/',
-        // 👉 Única imagen universal (colocá aquí el nombre sin extensión)
         items: ['aireUniversal'], // reemplazá por tu nombre real
         displayName: id => String(id)
       },
       aire: {
         label: 'AIRE ACOND.',
         path: 'img/aire/',
-        // 👉 Agregá aquí tus imágenes de aire (sin extensión). Ejemplo:
-        items: [800,801,802,803,804,805,806,807,808,809,810,811,812,813,814,815,816,817,818,819,820,821,822,823,824,825,826,827,828,829,830,831,832,833,834,835,836,837,838,839,840,841,842,843,844,845,846,847,848,849,850,851,852,853,854,855,856,857,858,859,860,861,862,863,864,865,866,867,868,869,870,871,872,873,874,875,876,877,878,879,880,881,882,883,884,885,886,887,889,890,891,892,893,895,900]
-, // reemplazá por los que tengas
+        items: [800,801,802,803,804,805,806,807,808,809,810,811,812,813,814,815,816,817,818,819,820,821,822,823,824,825,826,827,828,829,830,831,832,833,834,835,836,837,838,839,840,841,842,843,844,845,846,847,848,849,850,851,852,853,854,855,856,857,858,859,860,861,862,863,864,865,866,867,868,869,870,871,872,873,874,875,876,877,878,879,880,881,882,883,884,885,886,887,888,889,890,891,892,893,895],
         displayName: id => `AR ${id}`
       }
     };
 
     /* ================== REFERENCIAS DOM ================== */
-    const gridEl    = document.getElementById('grid');
-    const detailEl  = document.getElementById('detail');
-    const dImg      = document.getElementById('detailImg');
-    const dName     = document.getElementById('detailName');
-    const openLink  = document.getElementById('openLink');
-    const shareBtn  = document.getElementById('shareBtn');
-    const shared    = document.getElementById('shared');
-    const backLink  = document.getElementById('backLink');
-
+    const gridEl     = document.getElementById('grid');
     const sentinel   = document.getElementById('sentinel');
     const loadingNote= document.getElementById('loadingNote');
-
     const catBar     = document.getElementById('catBar');
 
-    // Modal Zoom
-    const zoomModal = document.getElementById('zoomModal');
-    const zoomImg   = document.getElementById('zoomImg');
-    const zoomClose = document.getElementById('zoomClose');
+    // Modal
+    const detailModal= document.getElementById('detailModal');
+    const modalCard  = document.getElementById('modalCard');
+    const modalImg   = document.getElementById('modalImg');
+    const modalName  = document.getElementById('modalName');
+    const modalShare = document.getElementById('modalShare');
+    const modalClose = document.getElementById('modalClose');
+    const modalToast = document.getElementById('modalToast');
 
     /* ================== ESTADO ================== */
     let currentCatKey = 'lcd';
     let SOURCE_LIST   = [];
-    let PAGE_SIZE     = 40;
+    const PAGE_SIZE   = 24;
     let page = 0, loading = false, observer = null;
 
     /* ================== UTILIDADES ================== */
@@ -225,23 +194,12 @@
       const cat = CATEGORIES[currentCatKey];
       return `${cat.path}${id}${EXT}`;
     }
-    function nameFor(id){
-      return CATEGORIES[currentCatKey].displayName(id);
-    }
+    function nameFor(id){ return CATEGORIES[currentCatKey].displayName(id); }
+
     function setActiveCatButton(){
       catBar.querySelectorAll('.cat-btn').forEach(b=>{
         b.classList.toggle('active', b.dataset.cat === currentCatKey);
       });
-    }
-    function writeCatToURL(){
-      const url = new URL(location.href);
-      url.searchParams.set('cat', currentCatKey);
-      history.replaceState({}, '', url);
-    }
-    function readCatFromURL(){
-      const url = new URL(location.href);
-      const c = url.searchParams.get('cat');
-      if (c && CATEGORIES[c]) currentCatKey = c;
     }
 
     /* ================== RENDER GRID (infinite) ================== */
@@ -254,7 +212,7 @@
         <img src="${src}" alt="${display}" loading="lazy">
         <div class="name">${display}</div>
       `;
-      card.addEventListener('click', () => openDetail(id));
+      card.addEventListener('click', () => openModal(id));
       return card;
     }
 
@@ -284,7 +242,7 @@
     }
 
     function fillViewportIfNeeded(){
-      if (detailEl.classList.contains('visible')) return;
+      if (detailModal.style.display === 'flex') return;
       if (document.documentElement.scrollHeight <= window.innerHeight + 50) {
         requestAnimationFrame(()=> appendBatch());
       }
@@ -295,7 +253,7 @@
       disconnectObserver();
       observer = new IntersectionObserver((entries)=>{
         const entry = entries[0];
-        if (entry.isIntersecting && !detailEl.classList.contains('visible')){
+        if (entry.isIntersecting && detailModal.style.display !== 'flex'){
           appendBatch();
         }
       }, { root:null, rootMargin:'800px 0px', threshold:0 });
@@ -317,10 +275,6 @@
       currentCatKey = catKey;
       SOURCE_LIST = [...CATEGORIES[currentCatKey].items];
       setActiveCatButton();
-      writeCatToURL();
-      // Reset de vista
-      detailEl.classList.remove('visible');
-      gridEl.style.display = 'grid';
       renderGridInitial();
     }
 
@@ -332,93 +286,54 @@
       setCategory(k);
     });
 
-    /* ================== DETALLE ================== */
-    function openDetail(id){
-      const url = new URL(location.href);
-      url.searchParams.set('id', id);
-      url.searchParams.set('cat', currentCatKey);
-      history.pushState({}, '', url);
-      disconnectObserver(); // pausar infinite scroll
-      showDetail(id);
-    }
-
-    function showDetail(id){
+    /* ================== MODAL DETALLE ================== */
+    function openModal(id){
       const src  = srcFor(id);
       const name = nameFor(id);
-      dImg.src = src; dImg.alt = name;
-      dName.textContent = name;
-
-      // Link directo a la imagen (para WhatsApp preview)
       const imgUrl = new URL(src, location.href).href;
-      openLink.href = imgUrl;
 
-      shareBtn.onclick = async () => {
+      modalImg.src = src;
+      modalImg.alt = name;
+      modalName.textContent = name;
+      modalToast.style.display = 'none';
+
+      modalShare.onclick = async () => {
         const shareData = { title: name, text: `Mirá este control: ${name}`, url: imgUrl };
         try {
           if (navigator.share) {
             await navigator.share(shareData);
-            shared.textContent = '✅ Compartido';
+            modalToast.textContent = '✅ Compartido';
           } else {
             await navigator.clipboard.writeText(imgUrl);
-            shared.textContent = '🔗 Link de la imagen copiado';
+            modalToast.textContent = '🔗 Link de la imagen copiado';
           }
-          shared.style.display = 'inline';
-          setTimeout(()=> shared.style.display='none', 2000);
+          modalToast.style.display = 'block';
+          setTimeout(()=> modalToast.style.display = 'none', 1800);
         } catch (err) { console.log('Cancelado o error al compartir:', err); }
       };
 
-      dImg.onclick = () => abrirZoom(src);
-
-      gridEl.style.display = 'none';
-      detailEl.classList.add('visible');
-      window.scrollTo({top:0, behavior:'smooth'});
+      detailModal.style.display = 'flex';
+      disconnectObserver(); // pausa el infinite scroll mientras está abierto
     }
 
-    // Volver
-    backLink.addEventListener('click', (e)=>{
-      e.preventDefault();
-      const url = new URL(location.href);
-      url.searchParams.delete('id');
-      history.pushState({}, '', url);
-      detailEl.classList.remove('visible');
-      gridEl.style.display = 'grid';
-      setupObserver();
+    function closeModal(){
+      detailModal.style.display = 'none';
+      setupObserver();         // reanuda
       fillViewportIfNeeded();
-    });
+    }
 
-    function getId(){ return new URL(location.href).searchParams.get('id'); }
-    window.addEventListener('popstate', ()=>{
-      readCatFromURL(); // si cambió por el link
-      setActiveCatButton();
-      const id = getId();
-      if(id){ showDetail(id); }
-      else {
-        detailEl.classList.remove('visible');
-        gridEl.style.display='grid';
-        setupObserver();
-        fillViewportIfNeeded();
-      }
-    });
+    // Cierre: botón, click fuera, ESC
+    modalClose.addEventListener('click', closeModal);
+    detailModal.addEventListener('click', (e)=>{ if(e.target === detailModal) closeModal(); });
+    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && detailModal.style.display === 'flex') closeModal(); });
 
-    window.addEventListener('resize', ()=>{
-      if (!detailEl.classList.contains('visible')) fillViewportIfNeeded();
-    });
-
-    /* ================== ZOOM SIMPLE ================== */
-    function abrirZoom(src){ zoomImg.src = src; zoomModal.style.display = 'flex'; }
-    function cerrarZoom(){ zoomModal.style.display = 'none'; }
-    zoomClose.addEventListener('click', cerrarZoom);
-    zoomModal.addEventListener('click', (e)=>{ if(e.target === zoomModal) cerrarZoom(); });
-    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') cerrarZoom(); });
+    window.addEventListener('resize', ()=>{ if (detailModal.style.display !== 'flex') fillViewportIfNeeded(); });
 
     /* ================== INIT ================== */
     function boot(){
-      readCatFromURL();
-      setActiveCatButton();
       SOURCE_LIST = [...CATEGORIES[currentCatKey].items];
+      setActiveCatButton();
       renderGridInitial();
-      const startId = getId();
-      if(startId){ showDetail(startId); }
     }
     boot();
   </script>
